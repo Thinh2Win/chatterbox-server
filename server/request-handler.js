@@ -11,6 +11,9 @@ this file and include it in basic-server.js so that it actually works.
 *Hint* Check out the node module documentation at http://nodejs.org/api/modules.html.
 
 **************************************************************/
+
+var qs = require('querystring');
+
 var defaultCorsHeaders = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -18,30 +21,44 @@ var defaultCorsHeaders = {
   'access-control-max-age': 10 // Seconds.
 };
 
-var body = [];
+var storage = [];
 var requestHandler = function(request, response) {
   console.log('Serving request type ' + request.method + ' for url ' + request.url);
   var statusCode = 200;
-  // headers['Content-Type'] = 'text/plain';
+
+  // const {methods, url } = request;
   var headers = defaultCorsHeaders;
-  const {methods, url } = request;
-  if (url === '/classes/messages') {
+  headers['Content-Type'] = 'text/plain';
+
+  if (request.url === '/classes/messages') {
     if (request.method === 'GET') {
-      response.writeHead(200, 'Content-Type', 'application/json');
-      response.end(JSON.stringify(body));
+      response.writeHead(200, headers);
+      response.end(JSON.stringify(storage));
     }
     if (request.method === 'POST') {
+      var requestBody = '';
       response.writeHead(201, 'Content-Type', 'application/json');
-      response.end();
+      request.on('data', function(data) {
+        // console.log(Buffer.toString(data));
+        requestBody += data;
+      });
+      request.on('end', function() {
+        var formData = qs.parse(requestBody);
+        var keys = Object.keys(formData);
+        var dataObject = JSON.parse(keys[0]);
+        storage.push(dataObject);
+      });
+      response.end('post completed');
     }
     if (request.method === 'OPTIONS') {
       response.statusCode = 200;
       response.writeHead(200, 'Content-Type', 'text/plain');
       response.end('Allow: Get, Post, Options');
     }
+  } else {
+    response.writeHead(404, headers);
+    response.end();
   }
-  response.writeHead(statusCode, headers);
-  response.end();
 };
 
 
